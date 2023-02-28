@@ -1,0 +1,32 @@
+body{
+    background-color: #193441!important;
+}
+.card{
+    background-color: #3E606F!important;
+    margin-bottom: 10px;
+}
+
+ul.pagination{
+    display: inline-flex;
+    gap: 10px;
+}
+
+li.current-page> a.btn.btn-light {
+    border: 1px solid #d4d4d7;
+    border-radius: 5px;
+}
+li.current-page.active> a.btn.btn-light {
+    color: #193441;
+    border: 1px solid #193441;
+    background: #F2B134;
+}
+
+li#previous-page> a.btn.btn-light{
+    border: 1px solid #d4d4d7;
+    border-radius: 5px;
+}
+
+li#next-page> a.btn.btn-light{
+    border: 1px solid #d4d4d7;
+    border-radius: 5px;
+}
