@@ -1,81 +1,95 @@
+var page;
+var maxLength;
+var totalPages;
+function getPageList(totalPages, page, maxLength) {
+  if (maxLength < 5) throw "maxLength must be at least 5";
+
+  function range(start, end) {
+      return Array.from(Array(end - start + 1), (_, i) => i + start); 
+  }
+
+  var sideWidth = maxLength < 9 ? 1 : 2;
+  var leftWidth = (maxLength - sideWidth*2 - 3) >> 1;
+  var rightWidth = (maxLength - sideWidth*2 - 2) >> 1;
+  if (totalPages <= maxLength) {
+      // no breaks in list
+      return range(1, totalPages);
+  }
+  if (page <= maxLength - sideWidth - 1 - rightWidth) {
+      // no break on left of page
+      return range(1, maxLength - sideWidth - 1)
+          .concat(0, range(totalPages - sideWidth + 1, totalPages));
+  }
+  if (page >= totalPages - sideWidth - 1 - rightWidth) {
+      // no break on right of page
+      return range(1, sideWidth)
+          .concat(0, range(totalPages - sideWidth - 1 - rightWidth - leftWidth, totalPages));
+  }
+  // Breaks on both sides
+  return range(1, sideWidth)
+      .concat(0, range(page - leftWidth, page + rightWidth),
+              0, range(totalPages - sideWidth + 1, totalPages));
+}
+
 $(document).ready(function () {
-   
-    var numPages = $('#container .card').length;
-    var perPage = 7;
-    var count = 0;
-    while (numPages >= 7) {
-    numPages -= 7;
-    count++;
-    }
-    if(numPages % 2 === 0){
-        count = count;
-    }else{
-        count = count + 1;
-    }
-    
-    $(".pagination").append("<li class='current-page active'><a class='btn btn-light' href='javascript:void(0)'>" + 1 + "</a></li>");
-
-    for (var i = 2; i <= count; i++) {
-      $(".pagination").append("<li class='current-page'><a class='btn btn-light' href='javascript:void(0)'>" + i + "</a></li>"); 
-    }
-
-    $(".pagination").append("<li id='next-page'><a href='javascript:void(0)' class='btn btn-light' aria-label=Next><span aria-hidden=true>&raquo;</span></a></li>");
-
-    $(".pagination li.current-page").on("click", function() {
-      if ($(this).hasClass('active')) {
-        return false; 
-      } else {
-        var currentPage = $(this).index(); 
-        $(".pagination li").removeClass('active'); 
-        $(this).addClass('active'); 
-        $("#container .card").hide(); 
-        var grandTotal = perPage * currentPage; 
-
-        for (var i = grandTotal - perPage; i < grandTotal; i++) {
-          $("#container .card:eq(" + i + ")").show(); 
-        }
-      }
-
-    });
-
-    $("#next-page").on('click', function(){
-        var currentPage = $(".pagination li.active").index();
-        if(currentPage == count){
-            return false;
-        }else{
-            currentPage++;
-            $(".pagination li").removeClass("active");
-            $("#container .card").hide();
-
-            var grandTotal = perPage * currentPage;
-
-            for(var i = grandTotal - perPage; i < grandTotal; i++){
-                $("#container .card:eq("+ i +")").show();
-            }
-
-            $(".pagination li.current-page:eq(" + (currentPage - 1) + ")").addClass('active'); 
-        }
-    }); 
-
-    $("#previous-page").on("click", function() {
-        var currentPage = $(".pagination li.active").index(); 
-        
-        if (currentPage === 1) {
-          return false; 
-        } else {
-          currentPage--; 
-          $(".pagination li").removeClass('active'); 
-          $("#container .card").hide(); 
-          var grandTotal = perPage * currentPage; 
   
-          
-          for (var i = grandTotal - perPage; i < grandTotal; i++) {
-            $("#container .card:eq(" + i + ")").show(); 
-          }
-  
-          $(".pagination li.current-page:eq(" + (currentPage - 1) + ")").addClass('active'); 
-        }
+  var numberOfItems = $("#container .card").length;
+  var limitPerPage = 5;
+  // Total pages rounded upwards
+  var totalPages = Math.ceil(numberOfItems / limitPerPage);
+  // Number of buttons at the top, not counting prev/next,
+  // but including the dotted buttons.
+  // Must be at least 5:
+  var paginationSize = 7; 
+  var currentPage;
+
+  function showPage(whichPage) {
+      if (whichPage < 1 || whichPage > totalPages) return false;
+      currentPage = whichPage;
+      $("#container .card").hide()
+          .slice((currentPage-1) * limitPerPage, 
+                  currentPage * limitPerPage).show();
+      // Replace the navigation items (not prev/next):            
+      $(".pagination li").slice(1, -1).remove();
+      getPageList(totalPages, currentPage, paginationSize).forEach( item => {
+          $("<li>").addClass("page-item")
+                   .addClass(item ? "current-page" : "disabled")
+                   .toggleClass("active", item === currentPage).append(
+              $("<a>").addClass("page-link btn btn-light").attr({
+                  href: "javascript:void(0)"}).text(item || "...")
+          ).insertBefore("#next-page");
       });
+      // Disable prev/next when at first/last page:
+      $("#previous-page").toggleClass("disabled", currentPage === 1);
+      $("#next-page").toggleClass("disabled", currentPage === totalPages);
+      return true;
+  }
 
-      $('#container .card').css('display', 'none').slice(0, perPage).css('display', 'block');
+  // Include the prev/next buttons:
+  $(".pagination").append(
+      $("<li>").addClass("page-item").attr({ id: "previous-page" }).append(
+          $("<a>").addClass("page-link btn btn-light").attr({
+              href: "javascript:void(0)"}).html("<")
+      ),
+      $("<li>").addClass("page-item").attr({ id: "next-page" }).append(
+          $("<a>").addClass("page-link btn btn-light").attr({
+              href: "javascript:void(0)"}).html(">")
+      )
+  );
+  // Show the page links
+  $("#container").show();
+  showPage(1);
+
+  // Use event delegation, as these items are recreated later    
+  $(document).on("click", ".pagination li.current-page:not(.active)", function () {
+      return showPage(+$(this).text());
+  });
+  $("#next-page").on("click", function () {
+      return showPage(currentPage+1);
+  });
+
+  $("#previous-page").on("click", function () {
+      return showPage(currentPage-1);
+  });
+  getPageList(totalPages, page, maxLength)
 });
